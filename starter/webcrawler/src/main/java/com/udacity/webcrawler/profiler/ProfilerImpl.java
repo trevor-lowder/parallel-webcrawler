@@ -3,7 +3,11 @@ package com.udacity.webcrawler.profiler;
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.Objects;
@@ -29,17 +33,35 @@ final class ProfilerImpl implements Profiler {
   public <T> T wrap(Class<T> klass, T delegate) {
     Objects.requireNonNull(klass);
 
-    // TODO: Use a dynamic proxy (java.lang.reflect.Proxy) to "wrap" the delegate in a
-    //       ProfilingMethodInterceptor and return a dynamic proxy from this method.
-    //       See https://docs.oracle.com/javase/10/docs/api/java/lang/reflect/Proxy.html.
+    if (!isProfiled(klass)) {
+      throw new IllegalArgumentException("Class does not contain any methods annotated with @Profiled");
+    }
 
-    return delegate;
+    return klass.cast(Proxy.newProxyInstance(
+        klass.getClassLoader(),
+        new Class<?>[]{klass},
+        new ProfilingMethodInterceptor(clock, delegate, state)
+    ));
+  }
+
+  private boolean isProfiled(Class<?> klass) {
+    for (Method method : klass.getMethods()) {
+      if (method.isAnnotationPresent(Profiled.class)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
   public void writeData(Path path) {
-    // TODO: Write the ProfilingState data to the given file path. If a file already exists at that
-    //       path, the new data should be appended to the existing file.
+    Objects.requireNonNull(path);
+    try (Writer writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+      writeData(writer);
+    } catch (IOException e) {
+      // Handle the exception appropriately, possibly rethrowing it as a runtime exception
+      throw new RuntimeException("Failed to write profiling data to file", e);
+    }
   }
 
   @Override
