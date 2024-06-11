@@ -46,14 +46,16 @@ final class WordCounts {
   private static final class WordCountComparator implements Comparator<Map.Entry<String, Integer>> {
     @Override
     public int compare(Map.Entry<String, Integer> a, Map.Entry<String, Integer> b) {
-      int countComparison = Integer.compare(b.getValue(), a.getValue());
-      if (countComparison != 0) {
-        return countComparison;
+      int frequencyComparison = Integer.compare(b.getValue(), a.getValue());
+      if (frequencyComparison != 0) {
+        return frequencyComparison;
       }
-      int lengthComparison = Integer.compare(a.getKey().length(), b.getKey().length());
+
+      int lengthComparison = Integer.compare(b.getKey().length(), a.getKey().length());
       if (lengthComparison != 0) {
         return lengthComparison;
       }
+
       return a.getKey().compareTo(b.getKey());
     }
   }
