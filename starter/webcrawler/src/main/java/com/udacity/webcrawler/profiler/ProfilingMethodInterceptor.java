@@ -47,4 +47,17 @@ final class ProfilingMethodInterceptor implements InvocationHandler {
       }
     }
   }
+
+  @Override 
+  public boolean equals(Object obj) {
+    if(this == obj) return true;
+    if(obj == null || getClass() != obj.getClass()) return false;
+    ProfilingMethodInterceptor that = (ProfilingMethodInterceptor) obj;
+    return delegate.equals(that.delegate);
+  }
+
+  @Override
+  public int hashCode() {
+    return delegate.hashCode();
+  }
 }
