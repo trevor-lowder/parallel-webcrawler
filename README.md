@@ -436,3 +436,11 @@ Make sure you have completed all the rubric items [here](https://review.udacity.
 ## Submit your Project
 
 You can submit your project by uploading a zip file or selecting your GitHub repo on the Udacity website.
+
+## Future Project Enhancements
+
+- Respecting robots.txt files on crawled pages. You can read more about robots.txt here(opens in a new tab).
+
+- Managing memory use by limiting the growth of the popular word count and profiling data structures, while not compromising accuracy.
+
+- Throttling HTTP requests (e.g., per domain) in order to not overwhelm crawled servers.
