@@ -1,14 +1,14 @@
 package com.udacity.webcrawler.json;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Utility class to write a {@link CrawlResult} to file.
@@ -31,10 +31,11 @@ public final class CrawlResultWriter {
    *
    * @param path the file path where the crawl result data should be written.
    */
-  public void write(Path path) throws IOException {
-    Objects.requireNonNull(path);
-    try (Writer writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+  public void write(Path path) {
+    try(Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
       write(writer);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -43,10 +44,13 @@ public final class CrawlResultWriter {
    *
    * @param writer the destination where the crawl result data should be written.
    */
-  public void write(Writer writer) throws IOException {
-    Objects.requireNonNull(writer);
+  public void write(Writer writer) {
     ObjectMapper objectMapper = new ObjectMapper();
     objectMapper.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-    objectMapper.writeValue(writer, result);
+    try {
+      objectMapper.writeValue(writer, result);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

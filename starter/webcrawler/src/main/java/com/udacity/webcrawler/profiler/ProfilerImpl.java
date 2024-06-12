@@ -1,10 +1,7 @@
 package com.udacity.webcrawler.profiler;
 
-import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
-
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Clock;
 import java.time.ZonedDateTime;
+import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
+import java.util.Arrays;
 import java.util.Objects;
 
 import javax.inject.Inject;
@@ -31,41 +30,33 @@ final class ProfilerImpl implements Profiler {
     this.startTime = ZonedDateTime.now(clock);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T wrap(Class<T> klass, T delegate) {
     Objects.requireNonNull(klass);
-
-    if (!isProfiled(klass)) {
-      throw new IllegalArgumentException("Class does not contain any methods annotated with @Profiled");
+    if (!isClassProfiled(klass)) {
+      throw new IllegalArgumentException(klass.getName() + "does not consist of profiled methods.");
     }
-
-    return klass.cast(Proxy.newProxyInstance(
-        klass.getClassLoader(),
-        new Class<?>[]{klass},
-        new ProfilingMethodInterceptor(clock, delegate, state)
-    ));
+    return (T) Proxy.newProxyInstance(
+            ProfilerImpl.class.getClassLoader(),
+            new Class<?>[]{klass},
+            new ProfilingMethodInterceptor(clock, startTime, delegate, state)
+    );
   }
 
-  private boolean isProfiled(Class<?> klass) {
-    for (Method method : klass.getDeclaredMethods()) {
-      if (method.isAnnotationPresent(Profiled.class)) {
-        return true;
-      }
-    }
-    return false;
+  private Boolean isClassProfiled (Class<?> klass) {
+    return Arrays.stream(klass.getDeclaredMethods())
+            .anyMatch(method -> method.isAnnotationPresent(Profiled.class));
   }
 
   @Override
-  public void writeData(Path path) {
+  public void writeData(Path path) throws IOException {
     try (Writer writer = Files.newBufferedWriter(
             path,
             StandardCharsets.UTF_8,
             StandardOpenOption.CREATE,
             StandardOpenOption.APPEND)){
       writeData(writer);
-      writer.flush();
-    } catch (IOException e) {
-      throw new RuntimeException(e);
     }
   }
 
@@ -77,4 +68,3 @@ final class ProfilerImpl implements Profiler {
     writer.write(System.lineSeparator());
   }
 }
-
