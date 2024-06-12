@@ -1,63 +1,46 @@
 package com.udacity.webcrawler.profiler;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * A method interceptor that checks whether {@link Method}s are annotated with the {@link Profiled}
- * annotation. If they are, the method interceptor records how long the method invocation took.
- */
-final class ProfilingMethodInterceptor implements InvocationHandler {
+public final class ProfilingMethodInterceptor implements InvocationHandler {
+    private final Clock clock;
+    private final Object target;
+    private final ProfilingState state;
 
-  private final Clock clock;
-  private final Object delegate;
-  private final ProfilingState state;
-
-  ProfilingMethodInterceptor(Clock clock, Object delegate, ProfilingState state) {
-    this.clock = Objects.requireNonNull(clock);
-    this.delegate = Objects.requireNonNull(delegate);
-    this.state = Objects.requireNonNull(state);
-  }
-
-  @Override
-  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-    Instant start = null;
-    boolean isProfiled = method.isAnnotationPresent(Profiled.class);
-
-    if (isProfiled) {
-      start = clock.instant();
+    ProfilingMethodInterceptor(Clock clock, Object target, ProfilingState state) {
+        this.clock = Objects.requireNonNull(clock);
+        this.target = Objects.requireNonNull(target);
+        this.state = Objects.requireNonNull(state);
     }
 
-    try {
-      return method.invoke(delegate, args);
-    } catch (IllegalAccessException | InvocationTargetException t) {
-      if (t.getCause() != null) {
-        throw t.getCause();
-      }
-      throw t;
-    } finally {
-      if (isProfiled) {
-        Instant end = clock.instant();
-        state.record(delegate.getClass(), method, Duration.between(start, end));
-      }
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        Instant start = null;
+        boolean profiled = method.isAnnotationPresent(Profiled.class);
+    
+        if (profiled) {
+            start = clock.instant();
+            System.out.println("Profiling started for method: " + method.getName());
+        }
+    
+        try {
+            return method.invoke(target, args);
+        } catch (InvocationTargetException e) {
+            throw e.getCause();
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (profiled) {
+                Instant end = clock.instant();
+                state.record(target.getClass(), method, Duration.between(start, end));
+                System.out.println("Profiling ended for method: " + method.getName());
+            }
+        }
     }
-  }
-
-  @Override 
-  public boolean equals(Object obj) {
-    if(this == obj) return true;
-    if(obj == null || getClass() != obj.getClass()) return false;
-    ProfilingMethodInterceptor that = (ProfilingMethodInterceptor) obj;
-    return delegate.equals(that.delegate);
-  }
-
-  @Override
-  public int hashCode() {
-    return delegate.hashCode();
-  }
 }

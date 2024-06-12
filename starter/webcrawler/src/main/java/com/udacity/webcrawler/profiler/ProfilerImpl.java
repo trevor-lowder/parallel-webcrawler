@@ -1,10 +1,12 @@
 package com.udacity.webcrawler.profiler;
 
-import javax.inject.Inject;
+import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -12,7 +14,7 @@ import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 
-import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
+import javax.inject.Inject;
 
 /**
  * Concrete implementation of the {@link Profiler}.
@@ -45,7 +47,7 @@ final class ProfilerImpl implements Profiler {
   }
 
   private boolean isProfiled(Class<?> klass) {
-    for (Method method : klass.getMethods()) {
+    for (Method method : klass.getDeclaredMethods()) {
       if (method.isAnnotationPresent(Profiled.class)) {
         return true;
       }
@@ -55,12 +57,15 @@ final class ProfilerImpl implements Profiler {
 
   @Override
   public void writeData(Path path) {
-    Objects.requireNonNull(path);
-    try (Writer writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
+    try (Writer writer = Files.newBufferedWriter(
+            path,
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND)){
       writeData(writer);
+      writer.flush();
     } catch (IOException e) {
-      // Handle the exception appropriately, possibly rethrowing it as a runtime exception
-      throw new RuntimeException("Failed to write profiling data to file", e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -72,3 +77,4 @@ final class ProfilerImpl implements Profiler {
     writer.write(System.lineSeparator());
   }
 }
+

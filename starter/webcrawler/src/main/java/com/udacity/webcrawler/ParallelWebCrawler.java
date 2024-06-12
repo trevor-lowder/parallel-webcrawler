@@ -3,6 +3,7 @@ package com.udacity.webcrawler;
 import com.udacity.webcrawler.json.CrawlResult;
 import com.udacity.webcrawler.parser.PageParser;
 import com.udacity.webcrawler.parser.PageParserFactory;
+import com.udacity.webcrawler.profiler.Profiled;
 
 import javax.inject.Inject;
 import java.time.Clock;
@@ -50,6 +51,7 @@ final class ParallelWebCrawler implements WebCrawler {
   }
 
   @Override
+  @Profiled
   public CrawlResult crawl(List<String> startingUrls) {
     Instant deadline = clock.instant().plus(timeout);
     Map<String, Integer> counts = new ConcurrentHashMap<>();
@@ -92,23 +94,24 @@ final class ParallelWebCrawler implements WebCrawler {
     }
 
     @Override
+    @Profiled
     protected void compute() {
-      if (depth == 0 || clock.instant().isAfter(deadline)) {
-        return;
-      }
-
-      List<CrawlTask> subtasks = urls.stream()
-          .filter(url -> ignoredUrls.stream().noneMatch(pattern -> pattern.matcher(url).matches()))
-          .filter(url -> visitedUrls.add(url))
-          .map(url -> {
-            PageParser.Result result = parserFactory.get(url).parse();
-            result.getWordCounts().forEach((word, count) ->
-                counts.merge(word, count, Integer::sum));
-            return new CrawlTask(result.getLinks(), deadline, depth - 1, counts, visitedUrls);
-          })
-          .collect(Collectors.toList());
-
-      invokeAll(subtasks);
+        if (clock.instant().isAfter(deadline) || depth == 0) {
+            return;
+        }
+    
+        List<CrawlTask> subtasks = urls.stream()
+            .filter(url -> ignoredUrls.stream().noneMatch(pattern -> pattern.matcher(url).matches()))
+            .filter(url -> visitedUrls.add(url))
+            .map(url -> {
+                PageParser.Result result = parserFactory.get(url).parse();
+                result.getWordCounts().forEach((word, count) -> counts.merge(word, count, Integer::sum));
+                return new CrawlTask(result.getLinks(), deadline, depth - 1, counts, visitedUrls);
+            })
+            .collect(Collectors.toList());
+    
+        invokeAll(subtasks);
     }
+    
   }
 }
